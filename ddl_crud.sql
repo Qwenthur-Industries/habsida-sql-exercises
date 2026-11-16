@@ -62,21 +62,28 @@ ON orders (status, created_at);
 
 -- Задание 9. Транзакция заказа
 
--- Перед выполнением stock товара 1 был равен 333.
+-- Перед выполнением проверяем текущий остаток товара.
 
 BEGIN;
 
-UPDATE products
-SET stock = stock - 2
-WHERE id = 1 AND stock >= 2;
-
+WITH updated_stock AS (
+    UPDATE products
+    SET stock = stock - 2
+    WHERE id = 1 AND stock >= 2
+    RETURNING id
+)
 INSERT INTO orders (user_id, product_id, quantity)
-VALUES (1, 1, 2);
+SELECT 1, id, 2
+FROM updated_stock
+RETURNING id, user_id, product_id, quantity;
 
 COMMIT;
 
+
 -- Результат:
--- Новый заказ: id = 30001
--- Остаток товара: 331
+-- Если stock >= 2, остаток уменьшается на 2 и создаётся заказ.
+-- Если stock < 2, заказ не создаётся.
+-- RETURNING показывает результат вставки.
+-- Обе операции выполняются в одной транзакции.
 -- В обеих операциях ошибок не возникло.
 -- При ошибке внутри транзакции используется ROLLBACK.
